@@ -10,7 +10,9 @@
  */
 #ifndef LSM9DS1_H
 #define LSM9DS1_H
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include <stdint.h>
 
 #define LSM9DS1_XL_ADDR 0x6b  ///< Accelerometer address
@@ -59,11 +61,13 @@ typedef enum
  * @brief Configuration for magnetometer data rate.
  * 
  */
-typedef struct __attribute__((packed))
+typedef union
 {
-    uint8_t self_test : 1; ///< Self test enable. Default: 0. (0: disabled, 1: enabled)
-    uint8_t fast_odr : 1;  ///< Enables data rates faster than 80 Hz. Default: 0 (0: disabled, 1: enabled)
-    /**
+    struct __attribute__((packed))
+    {
+        uint8_t self_test : 1; ///< Self test enable. Default: 0. (0: disabled, 1: enabled)
+        uint8_t fast_odr : 1;  ///< Enables data rates faster than 80 Hz. Default: 0 (0: disabled, 1: enabled)
+        /**
      * @brief Sets data rate from the sensor when fast_odr is disabled.
      * 
      * Set Data Rate in Hz.
@@ -76,8 +80,8 @@ typedef struct __attribute__((packed))
      * 110: 40 Hz
      * 111: 80 Hz
      */
-    uint8_t data_rate : 3;
-    /**
+        uint8_t data_rate : 3;
+        /**
     * @brief X and Y axes operative mode selection. Default value: 00
     * 
     * Operative mode for X and Y axes.
@@ -86,8 +90,8 @@ typedef struct __attribute__((packed))
     * 10: High perf
     * 11: Ultra-high perf
     */
-    uint8_t operative_mode : 2;
-    /**
+        uint8_t operative_mode : 2;
+        /**
      * @brief Temperature compensation enable.
      * 
      * Default value: 0
@@ -95,28 +99,34 @@ typedef struct __attribute__((packed))
      * 0: Temperature compensation disabled
      * 1: Temperature compensation enabled
      */
-    uint8_t temp_comp : 1;
+        uint8_t temp_comp : 1;
+    };
+    uint8_t data;
 } MAG_DATA_RATE;
 
 #define MAG_CTRL_REG2_M 0x21 ///< Magnetometer control register 2 address
 /**
  * @brief Reset or configure scale of Magnetometer
  */
-typedef struct __attribute__((packed))
+typedef union
 {
-    uint8_t reserved : 2;  ///< Reserved, must be 0.
-    uint8_t soft_rst : 1;  ///< Configuration registers and user register reset function. (0: default value; 1: reset operation)
-    uint8_t reboot : 1;    ///< Reboot memory content. Default value: 0 (0: normal mode; 1: reboot memory content)
-    uint8_t reserved2 : 1; ///< Reserved, must be 0.
-                           /**
+    struct __attribute__((packed))
+    {
+        uint8_t reserved : 2;  ///< Reserved, must be 0.
+        uint8_t soft_rst : 1;  ///< Configuration registers and user register reset function. (0: default value; 1: reset operation)
+        uint8_t reboot : 1;    ///< Reboot memory content. Default value: 0 (0: normal mode; 1: reboot memory content)
+        uint8_t reserved2 : 1; ///< Reserved, must be 0.
+                               /**
     * @brief Full-scale configuration. Default value: 00
     * 00: +/- 4 Gauss
     * 01: +/- 8 Gauss
     * 10: +/- 12 Gauss
     * 11: +/- 16 Gauss
     */
-    uint8_t full_scale : 2;
-    uint8_t reserved3 : 1; ///< Reserved, must be 0.
+        uint8_t full_scale : 2;
+        uint8_t reserved3 : 1; ///< Reserved, must be 0.
+    };
+    uint8_t data;
 } MAG_RESET;
 
 #define MAG_CTRL_REG3_M 0x22 ///< Magnetometer control register 3 address, write 0x0 to this.
@@ -128,23 +138,27 @@ typedef struct __attribute__((packed))
 /**
  * @brief Configures data updating method of the magnetometer.
  */
-typedef struct __attribute__((packed))
+typedef union
 {
-    uint8_t reserved : 6; ///< Reserved, must be 0.
-    /**
+    struct __attribute__((packed))
+    {
+        uint8_t reserved : 6; ///< Reserved, must be 0.
+        /**
      * @brief Block data update for magnetic data.
      * 0: Continuous update,
      * 1: Output registers not updated until MSB and LSB has been read
      * 
      */
-    uint8_t bdu : 1;
-    /**
+        uint8_t bdu : 1;
+        /**
      * @brief FAST_READ allows reading the high part of DATA OUT only in order to increase
      * reading efficiency. Default: 0
      * 0: FAST_READ disabled, 1: Enabled
      * 
      */
-    uint8_t fast_read : 1;
+        uint8_t fast_read : 1;
+    };
+    uint8_t data;
 } MAG_DATA_READ;
 /**
  * @brief Magnetometer measurement register addresses
@@ -167,18 +181,67 @@ typedef enum
  */
 typedef struct
 {
-    i2cbus *accel_dev;
-    i2cbus *mag_dev;
+    i2cbus accel_dev[1];
+    i2cbus mag_dev[1];
 } lsm9ds1;
 
 #define MAG_WHO_AM_I 0x0f    ///< Address of magnetometer ID register
 #define MAG_IDENT 0b00111101 ///< Magnetometer ID
 
-int lsm9ds1_init(lsm9ds1 *, uint8_t, uint8_t, uint8_t, uint8_t);
-int lsm9ds1_config_mag(lsm9ds1 *, MAG_DATA_RATE, MAG_RESET, MAG_DATA_READ);
-int lsm9ds1_reset_mag(lsm9ds1 *);
-int lsm9ds1_read_mag(lsm9ds1 *, short *);
-int lsm9ds1_offset_mag(lsm9ds1 *, short *);
-void lsm9ds1_destroy(lsm9ds1 *);
+/**
+ * @brief Takes the pointer to the device struct, XL address and M address,
+ * returns 1 on success, negative numbers on failure.
+ * 
+ * @param dev Pointer to lsm9ds1
+ * @param bus I2C Bus ID (X in /dev/i2cX)
+ * @param xl_addr Accelerometer address on I2C Bus (default 0x6b)
+ * @param mag_addr magnetometer address on I2C Bus (default 0x1e)
+ * @param ctx Magnetometer device context
+ * @return Returns 1 on success, -1 on failure
+ */
+int lsm9ds1_init(lsm9ds1 *dev, uint8_t bus, uint8_t xl_addr, uint8_t mag_addr, uint8_t ctx);
+/**
+ * @brief Configure the data rate, reset vector and data granularity.
+ * 
+ * @param dev Pointer to lsm9ds1
+ * @param datarate Data rate struct
+ * @param rst Reset struct
+ * @param dread Data read config struct
+ * @return Returns 1 on success, -1 on failure 
+ */
+int lsm9ds1_config_mag(lsm9ds1 *dev, MAG_DATA_RATE datarate, MAG_RESET rst, MAG_DATA_READ dread);
+/**
+ * @brief Reset the magnetometer memory.
+ * 
+ * @param dev Pointer to lsm9ds1
+ * @return Returns 1 on success, -1 on failure 
+ */
+int lsm9ds1_reset_mag(lsm9ds1 *dev);
+/**
+ * @brief Store the magnetic field readings in the array of shorts, order: X
+ * Y Z
+ * 
+ * @param dev Pointer to lsm9ds1
+ * @param B Pointer to an array of short of length 3 where magnetometer reading is stored
+ * @return Returns 1 on success, -1 on failure 
+ */
+int lsm9ds1_read_mag(lsm9ds1 *dev, short *B);
+/**
+ * @brief Set the mag field offsets using the array, order: X Y Z
+ * 
+ * @param dev Pointer to lsm9ds1
+ * @param offset Pointer to an array of shorts of length 3 where magnetometer offset is stored
+ * @return Returns 1 on success, -1 on failure 
+ */
+int lsm9ds1_offset_mag(lsm9ds1 *dev, short *offset);
+/**
+ * @brief Closes the file descriptors for the mag and accel and frees the allocated memory.
+ * 
+ * @param dev Pointer to lsm9ds1
+ */
+void lsm9ds1_destroy(lsm9ds1 *dev);
 
+#ifdef __cplusplus
+}
+#endif
 #endif // LSM9DS1_H
