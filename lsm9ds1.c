@@ -39,7 +39,7 @@ int lsm9ds1_init(lsm9ds1 *dev, uint8_t bus, uint8_t xl_addr, uint8_t mag_addr, u
         perror("i2cbus, accelerometer");
         return -1;
     }
-    if (i2cbus_open(dev->accel_dev, bus, xl_addr) < 0)
+    if (i2cbus_open(dev->mag_dev, bus, mag_addr) < 0)
     {
         perror("i2cbus, magnetometer");
         return -1;
