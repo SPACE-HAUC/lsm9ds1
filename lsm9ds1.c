@@ -200,7 +200,7 @@ void lsm9ds1_destroy(lsm9ds1 *dev)
     i2cbus_close(dev->mag_dev);
 }
 
-#ifdef UNIT_TEST
+#ifdef LSM9DS1_UNIT_TEST
 #include <stdio.h>
 #include <signal.h>
 
@@ -218,7 +218,7 @@ int main(int argc, char *argv[])
         printf("Invocation: ./%s <Bus ID>\n\n", argv[0]);
         return 0;
     }
-    int id = atoi(argv[0]);
+    int id = atoi(argv[1]);
     int xl_addr = LSM9DS1_XL_ADDR;
     int mag_addr = LSM9DS1_MAG_ADDR;
     lsm9ds1 *dev = (lsm9ds1 *)malloc(sizeof(lsm9ds1));
